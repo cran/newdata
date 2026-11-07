@@ -1,0 +1,165 @@
+#' Generate New Data `r lifecycle::badge("superseded")`
+#'
+#' Generates a new data frame (in the form of a tibble) with each variable
+#' held constant or varying as a unique ordered sequence.
+#'
+#' `new_data()` has been superseded by [xnew_data()],
+#' which accepts bare column names and provides
+#' finer control through [xnew_seq()], [xnew_value()], [xobs_only()] and [xcast()].
+#' `new_data()` remains fully functional and is maintained
+#' for backwards compatibility with existing code.
+#' All of its arguments continue to work.
+#' The `ref` and `obs_only` arguments are deprecated,
+#' which means that using them produces a warning
+#' but they still behave as documented.
+#'
+#' The call
+#' `new_data(data, seq = c("a", "b"), length_out = 30)`
+#' is equivalent to
+#' `xnew_data(data, a, b, .length_out = 30)`.
+#'
+#' @param data The data frame to generate the new data from.
+#' @param seq A character vector of the names of the variables in `data` to
+#' generate sequences for.
+#' All other variables are held constant at their reference value.
+#' @param ref `r lifecycle::badge("deprecated")` A named list of reference
+#' values for variables that are not in `seq`.
+#' Using it produces a warning.
+#' Instead name the value in [xnew_data()],
+#' for example `xnew_data(data, a, b = 1)`.
+#' @param obs_only `r lifecycle::badge("deprecated")` A list of character
+#' vectors indicating the sets of variables to only allow observed
+#' combinations for.
+#' If `TRUE` then `obs_only` is set to be `seq`.
+#' Using it produces a warning.
+#' Instead use [xobs_only()] in [xnew_data()],
+#' for example `xnew_data(data, xobs_only(a, b))`.
+#' @param length_out A count indicating the maximum length of sequences for
+#' all types of variables except logical, character, factor and ordered
+#' factors.
+#' @return A tibble of the new data.
+#' @seealso [xnew_data()]
+#' @examples
+#' new_data(old_data, "int")
+#' new_data(old_data, "dbl")
+#' new_data(old_data, c("int", "dbl"))
+#'
+#' # equivalent using xnew_data()
+#' xnew_data(old_data, int)
+#' xnew_data(old_data, dbl)
+#' xnew_data(old_data, int, dbl)
+#' @export
+new_data <- function(
+  data,
+  seq = character(0),
+  ref = list(),
+  obs_only = list(character(0)),
+  length_out = 30
+) {
+  if (!missing(ref)) {
+    lifecycle::deprecate_warn(
+      "0.0.0.9020",
+      "new_data(ref)",
+      details = "Use `xnew_data(data, col_name = 'new_value')`"
+    )
+  }
+
+  if (!missing(obs_only)) {
+    lifecycle::deprecate_warn(
+      "0.0.0.9020",
+      "new_data(obs_only)",
+      details = "Use `xnew_data(data, xobs_only(col_name))`"
+    )
+  }
+
+  chk_data(data)
+  chk_count(length_out)
+  chk_character(seq)
+  chk_list(ref)
+  chk_range(length_out, c(2L, 1000L))
+
+  if (isTRUE(obs_only)) {
+    obs_only <- list(seq)
+  }
+  chk_list(obs_only)
+  if (!all(map_lgl(obs_only, is.character))) {
+    err("`obs_only` must be a list of character vectors")
+  }
+
+  if (missing(ref) && missing(obs_only)) {
+    if (missing(seq)) {
+      args <- list(.data = data, .length_out = length_out)
+      return(do.call("xnew_data", args = args))
+    }
+    seq <- paste(seq, collapse = ", ")
+    if (missing(length_out)) {
+      length_out <- NULL
+    }
+    text <- paste(
+      "xnew_data(data",
+      seq,
+      ".length_out = length_out)",
+      sep = ", "
+    )
+    expr <- parse(text = text)
+    return(eval(expr))
+  }
+
+  obs_only <- obs_only %>% unique()
+
+  if (!all(has_name(data, seq))) {
+    err("`data` missing names in `seq`")
+  }
+
+  if (!all(has_name(data, names(ref)))) {
+    err("`data` missing names in `ref`")
+  }
+
+  if (!all(has_name(data, unique(unlist(obs_only))))) {
+    err("`data` missing names in `obs_only`")
+  }
+
+  if (length(ref)) {
+    if (!is_named(ref)) {
+      err("`ref` must be a named list")
+    }
+
+    if (any(names(ref) %in% seq)) {
+      wrn("`ref` should not contain variables in `seq`")
+    }
+
+    ref <- ref[!names(ref) %in% seq]
+
+    if (any(unique(unlist(obs_only)) %in% names(ref))) {
+      err("variables must not be in `obs_only` and `ref`")
+    }
+    ref <- ref %>%
+      check_classes(data[names(ref)], x_name = "ref", y_name = "data")
+  }
+
+  ops <- options(
+    new_data.length_out_lgl = 2L,
+    new_data.length_out_int = length_out,
+    new_data.length_out_dbl = length_out,
+    new_data.length_out_chr = Inf,
+    new_data.obs_only = FALSE
+  )
+  on.exit(options(ops))
+
+  new_seqs <- lapply(data[names(data) %in% seq], new_seq)
+  new_ref <- lapply(
+    data[!names(data) %in% seq & !names(data) %in% names(ref)],
+    new_value
+  )
+
+  new_data <- expand.grid(
+    c(new_seqs, new_ref, ref),
+    KEEP.OUT.ATTRS = FALSE,
+    stringsAsFactors = FALSE
+  )
+  for (obo in obs_only) {
+    new_data <- new_data %>% obs_only(data, obo)
+  }
+  new_data <- new_data[names(data)] %>% as_tibble()
+  new_data
+}

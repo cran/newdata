@@ -1,0 +1,77 @@
+#' Generate Observed Combinations Only
+#'
+#' Generates the observed combinations of one or more variables.
+#'
+#' By default [xnew_data()] generates all the combinations of the variables
+#' it is given. `xobs_only()` drops the combinations that do not occur in the
+#' data.
+#'
+#' @param ... One or more unnamed variables in `.data` to generate observed
+#'   combinations for. Naming an argument is an error as a new column has no
+#'   observed combinations to preserve; use a named argument to [xnew_data()]
+#'   instead.
+#' @param .length_out A count to override the default length of sequences.
+#' @inheritParams xcast
+#' @return A tibble of the observed combinations of the variables.
+#' @seealso [xnew_data()]
+#' @export
+#' @examples
+#' data <- tibble::tibble(
+#'   period = factor(c("before", "before", "after", "after"),
+#'     levels = c("before", "after")
+#'   ),
+#'   annual = factor(c(1, 3, 5, 8), levels = c(1, 3, 5, 8))
+#' )
+#' xnew_data(data, period, annual)
+#' xnew_data(data, xobs_only(period, annual))
+#' xnew_data(data, xobs_only(period, xnew_seq(annual, .length_out = 3)))
+xobs_only <- function(..., .length_out = NULL, .data = xnew_data_env$data) {
+  quos <- enquos(...)
+
+  named <- names2(quos)[nzchar(names2(quos))]
+  if (length(named)) {
+    err(
+      "`xobs_only()` arguments must not be named (",
+      cc(named, " and "),
+      ") as observed combinations must refer to columns of `.data`"
+    )
+  }
+
+  translated <- map(quos, quo_translate_xobs_only, .length_out)
+
+  out <- semi_crossing(!!!translated)
+  xcast(out, .data = .data)
+}
+
+quo_translate_xobs_only <- function(quo, length_out) {
+  new_quosure(
+    expr_translate_xobs_only(quo_get_expr(quo), length_out),
+    quo_get_env(quo)
+  )
+}
+
+expr_translate_xobs_only <- function(expr, length_out) {
+  if (is_symbol(expr)) {
+    expr(xnew_seq(!!expr, .length_out = !!length_out, .obs_only = TRUE))
+  } else {
+    expr
+  }
+}
+
+semi_crossing <- function(..., .data = xnew_data_env$data) {
+  if (is.null(.data)) {
+    err("`semi_crossing()` can only be called from `xnew_data()`")
+  }
+
+  out <- tidyr::crossing(...)
+
+  missing <- setdiff(names(out), names(.data))
+  if (length(missing)) {
+    err(
+      "`xobs_only()` arguments must refer to columns of `.data` (unrecognised: ",
+      cc(missing, " and "),
+      ")"
+    )
+  }
+  dplyr::semi_join(out, .data, by = names(out))
+}

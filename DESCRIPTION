@@ -1,0 +1,49 @@
+Package: newdata
+Title: Generate New Data Frames for Prediction
+Version: 0.1.0
+Authors@R: c(
+    person("Joe", "Thorley", , "joe@poissonconsulting.ca", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-7683-4592")),
+    person("Kirill", "Müller", , "kirill@cynkra.com", role = "aut",
+           comment = c(ORCID = "0000-0002-1416-3412")),
+    person("Ayla", "Pearson", , "ayla@poissonconsulting.ca", role = "aut",
+           comment = c(ORCID = "0000-0001-7388-1222")),
+    person("Nadine", "Hussein", , "nadine@poissonconsulting.ca", role = "ctb",
+           comment = c(ORCID = "0000-0003-4470-8361")),
+    person("Maëlle", "Salmon", , "maelle@cynkra.com", role = "ctb",
+           comment = c(ORCID = "0000-0002-2815-0399")),
+    person("Poisson Consulting", role = c("fnd", "cph"))
+  )
+Description: Generates new data frames for predictive purposes. By
+    default, all specified variables vary across their range while all
+    other variables are held constant at the default reference value.
+    Types, classes, factor levels and time zones are always preserved.
+    The user can specify the length of each sequence, require that only
+    observed values and combinations are used and add new variables. The
+    result is intended to be passed to the prediction method of a fitted
+    model object to visualize the effect of one or more variables while
+    controlling for the others.
+License: MIT + file LICENSE
+URL: https://poissonconsulting.github.io/newdata/,
+        https://github.com/poissonconsulting/newdata/
+BugReports: https://github.com/poissonconsulting/newdata/issues
+Depends: R (>= 4.1)
+Imports: chk, dplyr, hms, lifecycle, rlang, tibble, tidyr, vctrs
+Suggests: covr, datasets, spelling, testthat (>= 3.0.0), withr
+Config/Needs/website: poissonconsulting/poissontemplate
+Config/roxygen2/version: 8.1.0.9000
+Config/testthat/edition: 3
+Encoding: UTF-8
+Language: en-US
+LazyData: true
+NeedsCompilation: no
+Packaged: 2026-10-23 12:46:58 UTC; joe
+Author: Joe Thorley [aut, cre] (ORCID: <https://orcid.org/0000-0002-7683-4592>),
+  Kirill Müller [aut] (ORCID: <https://orcid.org/0000-0002-1416-3412>),
+  Ayla Pearson [aut] (ORCID: <https://orcid.org/0000-0001-7388-1222>),
+  Nadine Hussein [ctb] (ORCID: <https://orcid.org/0000-0003-4470-8361>),
+  Maëlle Salmon [ctb] (ORCID: <https://orcid.org/0000-0002-2815-0399>),
+  Poisson Consulting [fnd, cph]
+Maintainer: Joe Thorley <joe@poissonconsulting.ca>
+Repository: CRAN
+Date/Publication: 2026-11-07 14:30:08 UTC
